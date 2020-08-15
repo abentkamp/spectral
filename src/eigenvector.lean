@@ -21,38 +21,10 @@ import missing_mathlib.data.list.basic
 import missing_mathlib.set_theory.cardinal
 import missing_mathlib.ring_theory.algebra
 import analysis.complex.polynomial
+import missing_mathlib.field_thoery.algebraic_closure
 import smul_id
 
 universes u v w
-
-/-- algebraically closed field -/
-class algebraically_closed (α : Type*) extends field α :=
-(exists_root {p : polynomial α} : 0 < polynomial.degree p → ∃ a, polynomial.is_root p a)
-
-noncomputable instance complex.algebraically_closed : algebraically_closed ℂ := {
-  exists_root := (λ p hp, complex.exists_root hp)
-}
-
-section polynomial
-variables {α : Type*} [algebraically_closed α]
-open polynomial
-
-lemma polynomial.degree_eq_one_of_irreducible {p : polynomial α} (h_nz : p ≠ 0) (hp : irreducible p) : 
-  p.degree = 1 :=
-begin
-  have h_0_le_deg_p : 0 < degree p := degree_pos_of_ne_zero_of_nonunit h_nz hp.1,
-  cases (algebraically_closed.exists_root h_0_le_deg_p) with a ha,
-  have h_p_eq_mul : (X - C a) * (p / (X - C a)) = p,
-  { apply mul_div_eq_iff_is_root.2 ha },
-  have h_unit : is_unit (p / (X - C a)),
-  from or.resolve_left 
-        (hp.2 (X - C a) (p / (X - C a)) h_p_eq_mul.symm) 
-        polynomial.not_is_unit_X_sub_C,
-  show degree p = 1,
-  { rw [←h_p_eq_mul, degree_mul, degree_X_sub_C, degree_eq_zero_of_is_unit h_unit], 
-    simp }
-end
-end polynomial
 
 -- TODO: move ?
 lemma linear_independent_iff_eval₂ {α : Type v} {β : Type w}
@@ -143,7 +115,7 @@ set_option class.instance_max_depth 50
 /-- Every linear operator on a vector space over an algebraically closed field has
     an eigenvalue. (Axler's Theorem 2.1.) -/
 lemma exists_eigenvector 
-  [algebraically_closed α] [decidable_eq α] [vector_space α β] [finite_dimensional α β]
+  [field α] [is_alg_closed α] [decidable_eq α] [vector_space α β] [finite_dimensional α β]
   (f : β →ₗ[α] β) (hex : ∃ v : β, v ≠ 0) : 
   ∃ (x : β) (c : α), x ≠ 0 ∧ f x = c • x :=
 begin
@@ -162,7 +134,7 @@ begin
   obtain ⟨q, hq_mem, hq_noninj⟩ : ∃ q ∈ factors p, ¬function.injective ⇑(eval₂ smul_id_ring_hom f q), 
   { exact exists_noninjective_factor_of_eval₂_0 f v hv p h_p_ne_0 h_eval_p },
   have h_q_ne_0 : q ≠ 0 := ne_0_of_mem_factors h_p_ne_0 hq_mem,
-  have h_deg_q : q.degree = 1 := polynomial.degree_eq_one_of_irreducible h_q_ne_0 
+  have h_deg_q : q.degree = 1 := is_alg_closed.degree_eq_one_of_irreducible _ h_q_ne_0 
     ((factors_spec p h_p_ne_0).1 q hq_mem),
   have h_q_eval₂ : polynomial.eval₂ smul_id_ring_hom f q = q.leading_coeff • f + smul_id (q.coeff 0),
   { rw [polynomial.eq_X_add_C_of_degree_eq_one h_deg_q],
@@ -475,7 +447,7 @@ begin
   show v ∈ ↑⊥, by simp [hv0]
 end
 
-lemma pos_dim_eigenker_of_nonzero_eigenvec [algebraically_closed α] [vector_space α β] 
+lemma pos_dim_eigenker_of_nonzero_eigenvec [field α] [is_alg_closed α] [vector_space α β] 
   {f : β →ₗ[α] β} {n : ℕ} {μ : α} {x : β} (hx : x ≠ 0) (hfx : f x = μ • x) : 
   0 < dim α ((f - smul_id μ) ^ n.succ).ker :=
 begin
@@ -488,7 +460,7 @@ begin
 end
 
 lemma pos_findim_eigenker_of_nonzero_eigenvec 
-  [algebraically_closed α] [vector_space α β] [finite_dimensional α β]
+  [field α] [is_alg_closed α] [vector_space α β] [finite_dimensional α β]
   {f : β →ₗ[α] β} {n : ℕ} {μ : α} {x : β} (hx : x ≠ 0) (hfx : f x = μ • x) : 
   0 < findim α ((f - smul_id μ) ^ n.succ).ker :=
 begin
@@ -523,7 +495,7 @@ end
 
 /-- The generalized eigenvectors of f span the vectorspace β. (Axler's Proposition 3.4). -/
 lemma generalized_eigenvector_span 
-  [algebraically_closed α] [decidable_eq α] [vector_space α β] [finite_dimensional α β]
+  [field α] [is_alg_closed α] [decidable_eq α] [vector_space α β] [finite_dimensional α β]
   (f : β →ₗ[α] β) : 
   submodule.span α {x | ∃ k μ, generalized_eigenvector f k μ x} = ⊤ :=
 begin
