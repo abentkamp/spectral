@@ -22,6 +22,42 @@ import missing_mathlib.ring_theory.polynomial.basic
 import analysis.complex.polynomial
 import missing_mathlib.field_thoery.algebraic_closure
 
+/-!
+# Eigenvectors and eigenvalues
+
+This file defines eigenvectors and eigenvalues, as well as generalized
+eigenvectors and eigenvalues.
+
+An eigenvector of a linear map `f` is a nonzero vector `x` such that `f x = μ • x` 
+for some scalar `μ`. The scalar `μ` is called an eigenvalue. We express this
+by writing `eigenvector f μ x`.
+
+A generalized eigenvector of a linear map `f` is a nonzero vector `x` such that 
+`(f x - μ • x) ^ k = 0` for some scalar `μ` and some natural number `k`. The 
+scalar `μ` is called a generalized eigenvalue. We express this
+by writing `generalized_eigenvector f k μ x`.
+
+We follow Axler's approach [axler1996] that allows us to prove a lot of
+properties of eigenvectors without choosing a basis, without determinants and
+without matrices. We deviate from his definitions by defining 0 not to be an
+eigenvector, which seems to be the more common convention.
+
+## Notations
+
+The expression `algebra_map α (β →ₗ[α] β)` appears very often, which is why we
+use `am` as a local notation for it.
+
+## References
+
+* [Sheldon Axler, *Down with determinants!*,
+  https://www.maa.org/sites/default/files/pdf/awards/Axler-Ford-1996.pdf][axler1996]
+* https://en.wikipedia.org/wiki/Eigenvalues_and_eigenvectors
+
+## Tags
+
+eigenvector, eigenvalues, eigen
+-/
+
 universes u v w
 
 open vector_space principal_ideal_ring
