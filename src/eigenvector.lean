@@ -50,7 +50,6 @@ open polynomial
 open finite_dimensional
 
 section
-set_option class.instance_max_depth 50
 
 /-- Every linear operator on a vector space over an algebraically closed field has
     an eigenvalue. (Axler's Theorem 2.1.) -/
@@ -100,7 +99,6 @@ end
 end
 
 section
-set_option class.instance_max_depth 50
 
 /-- Non-zero eigenvectors corresponding to distinct eigenvalues of a linear operator are
 linearly independent (Axler's Proposition 2.2) -/
@@ -326,7 +324,7 @@ end
 section
 
 section
-set_option class.instance_max_depth 70
+
 lemma generalized_eigenvector_restrict_aux [field α] [vector_space α β] 
   (f : β →ₗ[α] β) (p : submodule α β) (k : ℕ) (μ : α) (x : p) 
   (hfp : ∀ (x : β), x ∈ p → f x ∈ p) : 
