@@ -4,7 +4,6 @@ import data.polynomial.field_division
 import missing_mathlib.data.multiset
 import missing_mathlib.data.polynomial
 import missing_mathlib.data.list.basic
-import missing_mathlib.algebra.group.units
 
 noncomputable theory
 local attribute [instance, priority 100] classical.prop_decidable
@@ -34,7 +33,7 @@ lemma exists_noninjective_factor_of_eval₂_0 {α : Type v} {β : Type w}
 begin
   obtain ⟨c, hc⟩ := (factors_spec p h_p_ne_0).2,
   have am_comm : ∀ (a : α) (b : β →ₗ[α] β), (algebra_map _ _) a * b = b * (algebra_map _ _) a := algebra.commutes',
-  rw mul_unit_eq_iff_mul_inv_eq at hc,
+  rw ←units.eq_mul_inv_iff_mul_eq at hc,
   rw [hc,
     @eval₂_mul_noncomm _ (β →ₗ[α] β) _ _ _ (algebra_map α _) f (factors p).prod 
       (@has_inv.inv (units (polynomial α)) _ c) (λ x y, ( algebra.commutes' x y).symm),
