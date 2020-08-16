@@ -5,7 +5,6 @@ universe variables u u' u'' v v' w w'
 
 variables {α : Type u} {β γ δ ε : Type v}
 variables {ι : Type w} {ι' : Type w'} {η : Type u''} {φ : η → Type u'}
--- TODO: relax these universe constraints
 
 section vector_space
 variables [decidable_eq ι] [decidable_eq ι'] [field α] [decidable_eq α] [add_comm_group β] [vector_space α β]

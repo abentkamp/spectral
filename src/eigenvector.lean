@@ -317,15 +317,12 @@ begin
         (@nat.find_spec (λ k : ℕ, generalized_eigenvector f k μ x) (classical.dec_pred _) h_exists_eigenvec),
       rw [←cardinal.nat_cast_le, ←cardinal.lift_mk_fin _, ←cardinal.lift_le, cardinal.lift_lift],
       rw findim_eq_dim,
-      apply h_lin_indep.le_lift_dim} }, -- TODO: shorten this?
+      apply h_lin_indep.le_lift_dim} },
 
   { show ((f - am μ) ^ findim α β) x = 0 → (∃ (k : ℕ), generalized_eigenvector f k μ x),
     exact λh, ⟨_, h⟩, }
 end
 
-#check linear_independent.le_lift_dim
-
--- TODO: replace "change" by some other tactic?
 section
 
 section
@@ -351,16 +348,6 @@ lemma generalized_eigenvector_restrict [field α] [vector_space α β]
   generalized_eigenvector (linear_map.restrict f p p hfp) k μ x 
     ↔ generalized_eigenvector f k μ x :=
 by { rw [generalized_eigenvector, subtype.ext_iff, generalized_eigenvector_restrict_aux], refl }
-
-#check set.image_preimage_subset 
--- begin
---   ext,
---   rw [set.mem_image, set.mem_set_of_eq],
---   split,
---   { intro h,
---     use f x,},
---   {}
--- end
 
 lemma generalized_eigenvector_dim_of_any
   [field α] [decidable_eq α] [vector_space α β] [finite_dimensional α β]

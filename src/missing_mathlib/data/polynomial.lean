@@ -7,14 +7,6 @@ namespace polynomial
 
 variables {α : Type u} {β : Type v}
 open polynomial
--- TODO: move
--- lemma not_is_unit_X_sub_C {α : Type*} [integral_domain α] [decidable_eq α]:  
---   ∀ a : α, ¬ is_unit (X - C a) :=
--- begin intros a ha, 
---   let ha' := degree_eq_zero_of_is_unit ha,
---   rw [degree_X_sub_C] at ha',
---   apply nat.zero_ne_one (option.injective_some _ ha'.symm)
--- end
 
 lemma leading_coeff_X_add_C {α : Type v} [integral_domain α] [decidable_eq α] (a b : α) (ha : a ≠ 0): 
   leading_coeff (C a * X + C b) = a :=
@@ -28,7 +20,7 @@ end
 end polynomial
 
 section eval₂
---TODO: move
+
 variables {α : Type u} {β : Type v} [comm_ring α] [decidable_eq α] [semiring β]
 variables (f : α →+* β) (x : β) (p q : polynomial α)
 open is_semiring_hom

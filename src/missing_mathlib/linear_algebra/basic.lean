@@ -22,10 +22,6 @@ def restrict
 lemma restrict_apply (f : β →ₗ[α] γ) (p : submodule α β) (q : submodule α γ) (hf : ∀ x ∈ p, f x ∈ q) (x : p) :
   f.restrict p q hf x = ⟨f x, hf x.1 x.2⟩ := rfl
 
--- TODO: replace sum_apply (wrong type classes on δ)
--- lemma sum_apply' [decidable_eq ι] (t : finset ι) (f : ι → β →ₗ[α] γ) (b : β) :
---   t.sum f b = t.sum (λd, f d b) :=
--- (@finset.sum_hom _ _ _ t f _ _ (λ g : β →ₗ[α] γ, g b) _).symm
 end
 end linear_map
 
