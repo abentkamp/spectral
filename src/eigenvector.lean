@@ -20,91 +20,31 @@ import missing_mathlib.algebra.group_power
 import missing_mathlib.data.list.basic
 import missing_mathlib.set_theory.cardinal
 import missing_mathlib.ring_theory.algebra
+import missing_mathlib.ring_theory.polynomial.basic
 import analysis.complex.polynomial
 import missing_mathlib.field_thoery.algebraic_closure
-import smul_id
 
 universes u v w
 
--- TODO: move ?
-lemma linear_independent_iff_eval₂ {α : Type v} {β : Type w}
-  [decidable_eq α] [comm_ring α] [decidable_eq β] [add_comm_group β] [module α β]
-  (f : β →ₗ[α] β) (v : β) : 
-  linear_independent α (λ n : ℕ, (f ^ n) v)
-    ↔ ∀ (p : polynomial α), polynomial.eval₂ smul_id_ring_hom f p v = 0 → p = 0 :=
-begin
-  rw linear_independent_iff,
-  simp only [finsupp.total_apply],
-  simp only [finsupp_sum_eq_eval₂],
-  simp only [smul_id_ring_hom, smul_id, linear_independent_iff, finsupp.total_apply, finsupp_sum_eq_eval₂],
-  refl
-end
-
 open vector_space principal_ideal_ring
-
-lemma ne_0_of_mem_factors {α : Type v} [field α] {p q : polynomial α} 
-  (hp : p ≠ 0) (hq : q ∈ factors p) : q ≠ 0 :=
-begin
-  intro h_q_eq_0,
-  rw h_q_eq_0 at hq,
-  apply hp ((associated_zero_iff_eq_zero p).1 _),
-  rw ←multiset.prod_eq_zero hq,
-  apply (factors_spec p hp).2
-end
-
-lemma exists_noninjective_factor_of_eval₂_0 {α : Type v} {β : Type w} 
-  [field α] [decidable_eq α] [decidable_eq β] [add_comm_group β] [vector_space α β]
-  (f : β →ₗ[α] β) (v : β) (hv : v ≠ 0) 
-  (p : polynomial α) (h_p_ne_0 : p ≠ 0) (h_eval_p : (polynomial.eval₂ smul_id_ring_hom f p) v = 0) : 
-  ∃ q ∈ factors p, ¬ function.injective ((polynomial.eval₂ smul_id_ring_hom f q : β →ₗ[α] β) : β → β) :=
-begin
-  obtain ⟨c, hc⟩ := (factors_spec p h_p_ne_0).2,
-  have smul_id_comm : ∀ (a : α) (b : β →ₗ[α] β), smul_id a * b = b * smul_id a := algebra.commutes',
-  rw mul_unit_eq_iff_mul_inv_eq at hc,
-  rw [hc,
-    @eval₂_mul_noncomm _ (β →ₗ[α] β) _ _ _ smul_id_ring_hom f (factors p).prod 
-      (@has_inv.inv (units (polynomial α)) _ c) (λ x y, ( algebra.commutes' x y).symm),
-    polynomial.eq_C_of_degree_eq_zero (polynomial.degree_coe_units (c⁻¹)),
-    polynomial.eval₂_C, ← multiset.coe_to_list (factors p), multiset.coe_prod,
-    eval₂_prod_noncomm smul_id_ring_hom (λ x y, (smul_id_comm x y).symm)] at h_eval_p,
-  have h_noninj : ¬ function.injective ⇑(list.prod 
-    (list.map (λ p, polynomial.eval₂ smul_id_ring_hom f p) (multiset.to_list (factors p))) *
-    smul_id (polynomial.coeff ↑c⁻¹ 0)),
-  { rw [←linear_map.ker_eq_bot, linear_map.ker_eq_bot', classical.not_forall],
-    use v, 
-    exact not_imp.2 (and.intro h_eval_p hv) },
-  show ∃ q ∈ factors p, ¬ function.injective ((polynomial.eval₂ smul_id_ring_hom f q).to_fun),
-  { classical,
-    by_contra h_contra,
-    simp only [not_exists, not_not] at h_contra, 
-    have h_factors_inj : ∀ g ∈ (factors p).to_list.map (λ q, (polynomial.eval₂ smul_id_ring_hom f q).to_fun),
-        function.injective g,
-    { intros g hg,
-      rw list.mem_map at hg,
-      rcases hg with ⟨q, hq₁, hq₂⟩,
-      rw multiset.mem_to_list at hq₁,
-      rw ←hq₂,
-      exact h_contra q hq₁ },
-    refine h_noninj (function.injective.comp _ _),
-    { unfold_coes,
-      dsimp only [list.prod, (*), mul_zero_class.mul, semiring.mul, ring.mul],
-      rw list.foldl_map' linear_map.to_fun linear_map.comp function.comp _ _ (λ _ _, rfl),
-      rw list.map_map,
-      unfold function.comp,
-      apply function.injective_foldl_comp (λ g, h_factors_inj g) function.injective_id },
-    { rw [←linear_map.ker_eq_bot, smul_id, linear_map.ker_smul, linear_map.ker_id],
-      apply polynomial.coeff_coe_units_zero_ne_zero }
-  }
-end
 
 section eigenvector
 
 variables {α : Type v} {β : Type w} [decidable_eq β] [add_comm_group β]
 
--- section
--- set_option class.instance_max_depth 50
--- def eigenvector [discrete_field α] [vector_space α β] (f : β →ₗ[α] β) (μ : α) (x : β) : Prop := f x = μ • x
--- end
+local notation `am` := algebra_map α (β →ₗ[α] β)
+
+lemma linear_independent_iff_eval₂ {α : Type v} {β : Type w}
+  [decidable_eq α] [comm_ring α] [decidable_eq β] [add_comm_group β] [module α β]
+  (f : β →ₗ[α] β) (v : β) : 
+  linear_independent α (λ n : ℕ, (f ^ n) v)
+    ↔ ∀ (p : polynomial α), polynomial.eval₂ (algebra_map _ _) f p v = 0 → p = 0 :=
+begin
+  rw linear_independent_iff,
+  simp only [finsupp.total_apply],
+  simp only [finsupp_sum_eq_eval₂], 
+  refl
+end
 
 open polynomial
 open finite_dimensional
@@ -127,26 +67,25 @@ begin
     have := cardinal.lift_lt.2 this,
     rw [cardinal.omega, cardinal.lift_lift] at this,
     apply lt_irrefl _ this, },
-  haveI := classical.dec (∃ (x : polynomial α), ¬(polynomial.eval₂ smul_id_ring_hom f x v = 0 → x = 0)),
-  obtain ⟨p, hp⟩ : ∃ p, ¬(eval₂ smul_id_ring_hom f p v = 0 → p = 0),
+  haveI := classical.dec (∃ (x : polynomial α), ¬(polynomial.eval₂ am f x v = 0 → x = 0)),
+  obtain ⟨p, hp⟩ : ∃ p, ¬(eval₂ am f p v = 0 → p = 0),
   { exact not_forall.1 (λ h, h_lin_dep ((linear_independent_iff_eval₂ f v).2 h)) },
-  obtain ⟨h_eval_p, h_p_ne_0⟩ : eval₂ smul_id_ring_hom f p v = 0 ∧ p ≠ 0 := not_imp.1 hp,
-  obtain ⟨q, hq_mem, hq_noninj⟩ : ∃ q ∈ factors p, ¬function.injective ⇑(eval₂ smul_id_ring_hom f q), 
-  { exact exists_noninjective_factor_of_eval₂_0 f v hv p h_p_ne_0 h_eval_p },
+  obtain ⟨h_eval_p, h_p_ne_0⟩ : eval₂ am f p v = 0 ∧ p ≠ 0 := not_imp.1 hp,
+  obtain ⟨q, hq_mem, hq_noninj⟩ : ∃ q ∈ factors p, ¬function.injective ⇑(eval₂ am f q), 
+  { exact polynomial.exists_noninjective_factor_of_eval₂_0 f v hv p h_p_ne_0 h_eval_p },
   have h_q_ne_0 : q ≠ 0 := ne_0_of_mem_factors h_p_ne_0 hq_mem,
   have h_deg_q : q.degree = 1 := is_alg_closed.degree_eq_one_of_irreducible _ h_q_ne_0 
     ((factors_spec p h_p_ne_0).1 q hq_mem),
-  have h_q_eval₂ : polynomial.eval₂ smul_id_ring_hom f q = q.leading_coeff • f + smul_id (q.coeff 0),
+  have h_q_eval₂ : polynomial.eval₂ am f q = q.leading_coeff • f + am (q.coeff 0),
   { rw [polynomial.eq_X_add_C_of_degree_eq_one h_deg_q],
-    simp [eval₂_mul_noncomm smul_id_ring_hom f _ _ (λ x y, ( algebra.commutes' x y).symm)],
+    simp [eval₂_mul_noncomm am f _ _ (λ x y, ( algebra.commutes' x y).symm)],
     simp [leading_coeff_X_add_C _ _ (λ h, h_q_ne_0 (leading_coeff_eq_zero.1 h))],
     refl },
-  obtain ⟨x, hx₁, hx₂⟩ : ∃ (x : β), eval₂ smul_id_ring_hom f q x = 0 ∧ ¬x = 0,
+  obtain ⟨x, hx₁, hx₂⟩ : ∃ (x : β), eval₂ am f q x = 0 ∧ ¬x = 0,
   { rw [←linear_map.ker_eq_bot, linear_map.ker_eq_bot', classical.not_forall] at hq_noninj,
     simpa only [not_imp] using hq_noninj },
   have h_fx_x_lin_dep: leading_coeff q • f x + coeff q 0 • x = 0,
   { rw h_q_eval₂ at hx₁,
-    dsimp [smul_id] at hx₁,
     exact hx₁ },
   show ∃ (x : β) (c : α), x ≠ 0 ∧ f x = c • x,
   { use x, 
@@ -195,9 +134,9 @@ begin
         cc } },
     let l' : μs →₀ α := finsupp.on_finset l_support' l'_f (λ μ, (h_l_support' μ).1),
     have total_l' : (@linear_map.to_fun α (finsupp μs α) β _ _ _ _ _ (finsupp.total μs β α xs)) l' = 0,
-    { let g := f - smul_id μ₀, 
+    { let g := f - am μ₀, 
       have h_gμ₀: g (l μ₀ • xs μ₀) = 0, 
-        by rw [linear_map.map_smul, linear_map.sub_apply, h_eigenvec, smul_id_apply, sub_self, smul_zero],
+        by rw [linear_map.map_smul, linear_map.sub_apply, h_eigenvec, module.endomorphism_algebra_map_apply2, sub_self, smul_zero],
       have h_useless_filter : finset.filter (λ (a : μs), l'_f a ≠ 0) l_support' = l_support',
       { convert @finset.filter_congr _ _ _ (classical.dec_pred _) (classical.dec_pred _) _ _,
         { apply finset.filter_true.symm },
@@ -205,7 +144,7 @@ begin
       have bodies_eq : ∀ (μ : μs), l'_f μ • xs μ = g (l μ • xs μ), 
       { intro μ,
         dsimp only [g, l'_f],
-        rw [linear_map.map_smul, linear_map.sub_apply, h_eigenvec, smul_id_apply, ←sub_smul, smul_smul, mul_comm] },
+        rw [linear_map.map_smul, linear_map.sub_apply, h_eigenvec, module.endomorphism_algebra_map_apply2, ←sub_smul, smul_smul, mul_comm] },
       have := finsupp.total_on_finset l_support' l'_f xs _,
       unfold_coes at this,
       rw [this, ←linear_map.map_zero g,
@@ -258,15 +197,15 @@ begin
 end
 
 def generalized_eigenvector [field α] [vector_space α β] 
-  (f : β →ₗ[α] β) (k : ℕ) (μ : α) (x : β) : Prop := ((f - smul_id μ) ^ k) x = 0
+  (f : β →ₗ[α] β) (k : ℕ) (μ : α) (x : β) : Prop := ((f - am μ) ^ k) x = 0
 
 lemma generalized_eigenvector_zero_beyond [field α] [vector_space α β] 
   {f : β →ₗ[α] β} {k : ℕ} {μ : α} {x : β} (h : generalized_eigenvector f k μ x) :
-  ∀ m : ℕ, k ≤ m → ((f - smul_id μ) ^ m) x = 0 :=
+  ∀ m : ℕ, k ≤ m → ((f - am μ) ^ m) x = 0 :=
 begin
   intros m hm,
   rw ←pow_eq_pow_sub_mul _ hm,
-  change ((f - smul_id μ) ^ (m - k)) (((f - smul_id μ) ^ k) x) = 0,
+  change ((f - am μ) ^ (m - k)) (((f - am μ) ^ k) x) = 0,
   unfold generalized_eigenvector at h,
   rw [h, linear_map.map_zero]
 end
@@ -285,13 +224,13 @@ lemma generalized_eigenvector_of_eigenvector [field α] [vector_space α β]
   generalized_eigenvector f k μ x :=
 begin
   rw [generalized_eigenvector, ←nat.succ_pred_eq_of_pos hk, pow_succ'],
-  change ((f - smul_id μ) ^ nat.pred k) ((f - smul_id μ) x) = 0,
-  have : (f - smul_id μ) x = 0 := by simp [hx, smul_id_apply],
+  change ((f - am μ) ^ nat.pred k) ((f - am μ) x) = 0,
+  have : (f - am μ) x = 0 := by simp [hx, module.endomorphism_algebra_map_apply2],
   simp [this]
 end
 
 /-- The set of generalized eigenvectors of f corresponding to an eigenvalue μ
-    equals the kernel of (f - smul_id μ) ^ n, where n is the dimension of 
+    equals the kernel of (f - am μ) ^ n, where n is the dimension of 
     the vector space (Axler's Lemma 3.1). -/
 lemma generalized_eigenvector_dim 
   [field α] [decidable_eq α] [vector_space α β] [finite_dimensional α β]
@@ -300,10 +239,10 @@ lemma generalized_eigenvector_dim
     ↔ generalized_eigenvector f (findim α β) μ x :=
 begin
   split,
-  { show (∃ (k : ℕ), generalized_eigenvector f k μ x) → ((f - smul_id μ) ^ findim α β) x = 0,
+  { show (∃ (k : ℕ), generalized_eigenvector f k μ x) → ((f - am μ) ^ findim α β) x = 0,
     intro h_exists_eigenvec,
     let k := @nat.find (λ k : ℕ, generalized_eigenvector f k μ x) (classical.dec_pred _) h_exists_eigenvec,
-    let z := (λ i : fin k, ((f - smul_id μ) ^ (i : ℕ)) x),
+    let z := (λ i : fin k, ((f - am μ) ^ (i : ℕ)) x),
 
     have h_lin_indep : linear_independent α z,
     { rw linear_independent_iff,
@@ -313,19 +252,19 @@ begin
       simp only [h_i_val.symm] at *,
       clear h_i_val i_val,
 
-      have h_zero_of_lt : ∀ j, j < i → ((f - smul_id μ) ^ (k - i.val - 1)) (l j • z j) = 0,
+      have h_zero_of_lt : ∀ j, j < i → ((f - am μ) ^ (k - i.val - 1)) (l j • z j) = 0,
       { intros j hj,
         simp [ih j hj j rfl] }, 
 
-      have h_zero_beyond_k : ∀ m, k ≤ m → ((f - smul_id μ) ^ m) x = 0,
+      have h_zero_beyond_k : ∀ m, k ≤ m → ((f - am μ) ^ m) x = 0,
       { apply generalized_eigenvector_zero_beyond,
         apply (@nat.find_spec (λ k : ℕ, generalized_eigenvector f k μ x) (classical.dec_pred _) h_exists_eigenvec) },
 
-      have h_zero_of_gt : ∀ j, j > i → ((f - smul_id μ) ^ (k - i.val - 1)) (l j • z j) = 0,
+      have h_zero_of_gt : ∀ j, j > i → ((f - am μ) ^ (k - i.val - 1)) (l j • z j) = 0,
       { intros j hj,
         dsimp only [z],
         rw [linear_map.map_smul],
-        change l j • ((f - smul_id μ) ^ (k - i.val - 1) * ((f - smul_id μ) ^ ↑j)) x = 0,
+        change l j • ((f - am μ) ^ (k - i.val - 1) * ((f - am μ) ^ ↑j)) x = 0,
         rw [←pow_add, h_zero_beyond_k, smul_zero],
         rw [nat.sub_sub, ←nat.sub_add_comm (nat.succ_le_of_lt i.2)],
         apply nat.le_sub_right_of_add_le,
@@ -335,18 +274,18 @@ begin
         change i.val < (j : ℕ),
         exact hj }, 
 
-      have h_zero_of_ne : ∀ j, j ≠ i → ((f - smul_id μ) ^ (k - i.val - 1)) (l j • z j) = 0,
+      have h_zero_of_ne : ∀ j, j ≠ i → ((f - am μ) ^ (k - i.val - 1)) (l j • z j) = 0,
       { intros j hj,
         cases lt_or_gt_of_ne hj with h_lt h_gt,
         apply h_zero_of_lt j h_lt,
         apply h_zero_of_gt j h_gt }, 
 
-      have h_zero_of_not_support : i ∉ l.support → ((f - smul_id μ) ^ (k - i.val - 1)) (l i • z i) = 0,
+      have h_zero_of_not_support : i ∉ l.support → ((f - am μ) ^ (k - i.val - 1)) (l i • z i) = 0,
       { intros hi,
         rw [finsupp.mem_support_iff, not_not] at hi,
         rw [hi, zero_smul, linear_map.map_zero] },
 
-      have h_l_smul_pow_k_sub_1 : l i • (((f - smul_id μ) ^ (k - 1)) x) = 0,
+      have h_l_smul_pow_k_sub_1 : l i • (((f - am μ) ^ (k - 1)) x) = 0,
       { have h_k_sub_1 : k - i.val - 1 + i.val = k - 1,
         { rw ←nat.sub_add_comm,
           { rw nat.sub_add_cancel,
@@ -354,7 +293,7 @@ begin
           { apply nat.le_sub_left_of_add_le,
             apply nat.succ_le_of_lt i.2 } },
         rw [←h_k_sub_1, pow_add],
-        let g := (f - smul_id μ) ^ (k - i.val - 1),
+        let g := (f - am μ) ^ (k - i.val - 1),
         rw [finsupp.total_apply, finsupp.sum] at hl,
         have := congr_arg g hl,
         rw [linear_map.map_sum, linear_map.map_zero g] at this,
@@ -363,7 +302,7 @@ begin
         simp only [linear_map.map_smul, z] at this,
         apply this },
 
-      have h_pow_k_sub_1 : ((f - smul_id μ) ^ (k - 1)) x ≠ 0 := 
+      have h_pow_k_sub_1 : ((f - am μ) ^ (k - 1)) x ≠ 0 := 
         @nat.find_min (λ k : ℕ, generalized_eigenvector f k μ x) (classical.dec_pred _) h_exists_eigenvec _
             (nat.sub_lt (nat.lt_of_le_of_lt (nat.zero_le _) i.2) nat.zero_lt_one),
       
@@ -373,14 +312,14 @@ begin
         apply (vector_space.smul_neq_zero _ h_li_ne_0).1, 
         apply h_l_smul_pow_k_sub_1 } },
 
-    show ((f - smul_id μ) ^ findim α β) x = 0,
+    show ((f - am μ) ^ findim α β) x = 0,
     { apply generalized_eigenvector_zero_beyond 
         (@nat.find_spec (λ k : ℕ, generalized_eigenvector f k μ x) (classical.dec_pred _) h_exists_eigenvec),
       rw [←cardinal.nat_cast_le, ←cardinal.lift_mk_fin _, ←cardinal.lift_le, cardinal.lift_lift],
       rw findim_eq_dim,
       apply h_lin_indep.le_lift_dim} }, -- TODO: shorten this?
 
-  { show ((f - smul_id μ) ^ findim α β) x = 0 → (∃ (k : ℕ), generalized_eigenvector f k μ x),
+  { show ((f - am μ) ^ findim α β) x = 0 → (∃ (k : ℕ), generalized_eigenvector f k μ x),
     exact λh, ⟨_, h⟩, }
 end
 
@@ -394,14 +333,14 @@ set_option class.instance_max_depth 70
 lemma generalized_eigenvector_restrict_aux [field α] [vector_space α β] 
   (f : β →ₗ[α] β) (p : submodule α β) (k : ℕ) (μ : α) (x : p) 
   (hfp : ∀ (x : β), x ∈ p → f x ∈ p) : 
-  (((f.restrict p p hfp - smul_id μ) ^ k) x : β) 
-  = ((f - smul_id μ) ^ k) x :=
+  (((f.restrict p p hfp - algebra_map _ _ μ) ^ k) x : β) 
+  = ((f - algebra_map _ _ μ) ^ k) x :=
 begin
   induction k with k ih,
   { rw [pow_zero, pow_zero, linear_map.one_app, linear_map.one_app] },
   { rw [pow_succ, pow_succ], 
-    change ((f.restrict p p hfp - smul_id μ) (((f.restrict p p hfp - smul_id μ) ^ k) x) : β) =
-        (f - smul_id μ) (((f - smul_id μ) ^ k) x),
+    change ((f.restrict p p hfp - algebra_map _ _ μ) (((f.restrict p p hfp - algebra_map _ _ μ) ^ k) x) : β) =
+        (f - algebra_map _ _ μ) (((f - algebra_map _ _ μ) ^ k) x),
     rw [linear_map.sub_apply, linear_map.sub_apply, linear_map.restrict_apply, ←ih], 
     refl }
 end
@@ -436,12 +375,12 @@ end
 lemma generalized_eigenvec_disjoint_range_ker
   [field α] [decidable_eq α] [vector_space α β] [finite_dimensional α β]
   (f : β →ₗ[α] β) (μ : α) : 
-  disjoint ((f - smul_id μ) ^ findim α β).range ((f - smul_id μ) ^ findim α β).ker :=
+  disjoint ((f - am μ) ^ findim α β).range ((f - am μ) ^ findim α β).ker :=
 begin
   rintros v ⟨⟨u, _, hu⟩, hv⟩,
-  have h2n : ((f - smul_id μ) ^ (findim α β + findim α β)) u = 0,
+  have h2n : ((f - am μ) ^ (findim α β + findim α β)) u = 0,
   { rw [pow_add, ←linear_map.mem_ker.1 hv, ←hu], refl },
-  have hn : ((f - smul_id μ) ^ findim α β) u = 0, 
+  have hn : ((f - am μ) ^ findim α β) u = 0, 
   { apply generalized_eigenvector_dim_of_any h2n },
   have hv0 : v = 0, by rw [←hn, hu],
   show v ∈ ↑⊥, by simp [hv0]
@@ -449,11 +388,11 @@ end
 
 lemma pos_dim_eigenker_of_nonzero_eigenvec [field α] [is_alg_closed α] [vector_space α β] 
   {f : β →ₗ[α] β} {n : ℕ} {μ : α} {x : β} (hx : x ≠ 0) (hfx : f x = μ • x) : 
-  0 < dim α ((f - smul_id μ) ^ n.succ).ker :=
+  0 < dim α ((f - am μ) ^ n.succ).ker :=
 begin
-  have x_mem : x ∈ ((f - smul_id μ) ^ n.succ).ker,
-  { simp [pow_succ', hfx, smul_id_apply] },
-  apply dim_pos_of_mem_ne_zero (⟨x, x_mem⟩ : ((f - smul_id μ) ^ n.succ).ker),
+  have x_mem : x ∈ ((f - am μ) ^ n.succ).ker,
+  { simp [pow_succ', hfx, module.endomorphism_algebra_map_apply2] },
+  apply dim_pos_of_mem_ne_zero (⟨x, x_mem⟩ : ((f - am μ) ^ n.succ).ker),
   intros h,
   apply hx,
   exact congr_arg subtype.val h,
@@ -462,7 +401,7 @@ end
 lemma pos_findim_eigenker_of_nonzero_eigenvec 
   [field α] [is_alg_closed α] [vector_space α β] [finite_dimensional α β]
   {f : β →ₗ[α] β} {n : ℕ} {μ : α} {x : β} (hx : x ≠ 0) (hfx : f x = μ • x) : 
-  0 < findim α ((f - smul_id μ) ^ n.succ).ker :=
+  0 < findim α ((f - am μ) ^ n.succ).ker :=
 begin
   apply cardinal.nat_cast_lt.1,
   rw findim_eq_dim,
@@ -471,7 +410,7 @@ end
 
 lemma eigenker_le_span_gen_eigenvec [field α] [vector_space α β] 
   (f : β →ₗ[α] β) (μ₀ : α) (n : ℕ) :
-((f - smul_id μ₀) ^ n).ker 
+((f - am μ₀) ^ n).ker 
   ≤ submodule.span α ({x : β | ∃ (k : ℕ) (μ : α), generalized_eigenvector f k μ x}) :=
 begin
   intros x hx,
@@ -481,15 +420,14 @@ end
 
 lemma image_mem_eigenrange_of_mem_eigenrange [field α] [vector_space α β] 
   {f : β →ₗ[α] β} {μ : α} {x : β} {n : ℕ}
-  (hx : x ∈ ((f - smul_id μ) ^ n).range) : 
-  f x ∈ ((f - smul_id μ) ^ n).range :=
+  (hx : x ∈ ((f - am μ) ^ n).range) : 
+  f x ∈ ((f - am μ) ^ n).range :=
 begin
   rw linear_map.mem_range at *,
   rcases hx with ⟨w, hw⟩,
   use f w,
-  have hcommutes : f.comp ((f - smul_id μ) ^ n) = ((f - smul_id μ) ^ n).comp f := 
+  have hcommutes : f.comp ((f - am μ) ^ n) = ((f - am μ) ^ n).comp f := 
     algebra.mul_sub_algebra_map_pow_commutes f μ n,
-    -- TODO: use algebra_map instead of smul_id
   rw [←linear_map.comp_apply, ←hcommutes, linear_map.comp_apply, hw],
 end
 
@@ -512,8 +450,8 @@ begin
     obtain ⟨x, μ₀, hx_ne_0, hμ₀⟩ : ∃ (x : β) (μ₀ : α), x ≠ 0 ∧ f x = μ₀ • x,
     { apply exists_eigenvector f 
         (exists_mem_ne_zero_of_findim_pos h_dim_pos) },
-    let V₁ := ((f - smul_id μ₀) ^ n.succ).ker,
-    let V₂ := ((f - smul_id μ₀) ^ n.succ).range,
+    let V₁ := ((f - am μ₀) ^ n.succ).ker,
+    let V₂ := ((f - am μ₀) ^ n.succ).range,
     have h_disjoint : disjoint V₂ V₁,
     { simp only [V₁, V₂, h_dim.symm],
       exact generalized_eigenvec_disjoint_range_ker f μ₀ },

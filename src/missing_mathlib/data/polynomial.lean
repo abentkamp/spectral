@@ -1,5 +1,5 @@
 import data.polynomial
-import smul_id
+import missing_mathlib.ring_theory.algebra
 
 universe variables u v w
 
@@ -57,11 +57,11 @@ lemma finsupp_sum_eq_eval₂ (α : Type v) (β : Type w)
   [decidable_eq α] [comm_ring α] [decidable_eq β] [add_comm_group β] [module α β]
   (f : β →ₗ[α] β) (v : β) (p : polynomial α) : 
   (finsupp.sum p (λ n b, b • (f ^ n) v))  
-    = polynomial.eval₂ smul_id_ring_hom f p v :=
+    = polynomial.eval₂ (algebra_map α (β →ₗ[α] β)) f p v :=
 begin
   dunfold polynomial.eval₂ finsupp.sum,
   convert @finset.sum_hom _ _ _ _ _ p.support _ (λ h : β →ₗ[α] β, h v) _,
-  simp [smul_id_ring_hom, smul_id],
+  simp [module.endomorphism_algebra_map_apply]
 end
 
 lemma eval₂_prod_noncomm {α β : Type*} [comm_ring α] [decidable_eq α] [semiring β]

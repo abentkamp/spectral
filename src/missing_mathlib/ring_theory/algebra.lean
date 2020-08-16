@@ -22,3 +22,12 @@ begin
 end
 
 end algebra
+
+-- Put below endomorphism algebra
+lemma module.endomorphism_algebra_map_apply (R : Type u) (M : Type v)
+  [comm_ring R] [add_comm_group M] [module R M] (a : R) : 
+  (algebra_map R (M →ₗ[R] M)) a = a • linear_map.id := rfl
+
+lemma module.endomorphism_algebra_map_apply2 (R : Type u) (M : Type v)
+  [comm_ring R] [add_comm_group M] [module R M] (a : R) (m : M) : 
+  (algebra_map R (M →ₗ[R] M)) a m = a • m := rfl
