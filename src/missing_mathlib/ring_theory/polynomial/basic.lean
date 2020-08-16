@@ -71,4 +71,16 @@ begin
   }
 end
 
+lemma linear_independent_iff_eval₂ {α : Type v} {β : Type w}
+  [decidable_eq α] [comm_ring α] [decidable_eq β] [add_comm_group β] [module α β]
+  (f : β →ₗ[α] β) (v : β) : 
+  linear_independent α (λ n : ℕ, (f ^ n) v)
+    ↔ ∀ (p : polynomial α), polynomial.eval₂ (algebra_map _ _) f p v = 0 → p = 0 :=
+begin
+  rw linear_independent_iff,
+  simp only [finsupp.total_apply],
+  simp only [finsupp_sum_eq_eval₂], 
+  refl
+end
+
 end polynomial

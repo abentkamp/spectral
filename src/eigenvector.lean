@@ -60,33 +60,16 @@ eigenvector, eigenvalues, eigen
 
 universes u v w
 
-open vector_space principal_ideal_ring
-
-section eigenvector
+open vector_space principal_ideal_ring polynomial finite_dimensional
 
 variables {α : Type v} {β : Type w} [decidable_eq β] [add_comm_group β]
 
+/-- An eigenvector of a linear map `f` with eigenvalue `μ` is a nonzero vector
+    `x` such that `f x = μ • x`. -/
 def eigenvector [field α] [vector_space α β] 
   (f : β →ₗ[α] β) (μ : α) (x : β) : Prop := x ≠ 0 ∧ f x = μ • x
 
 local notation `am` := algebra_map α (β →ₗ[α] β)
-
-lemma linear_independent_iff_eval₂ {α : Type v} {β : Type w}
-  [decidable_eq α] [comm_ring α] [decidable_eq β] [add_comm_group β] [module α β]
-  (f : β →ₗ[α] β) (v : β) : 
-  linear_independent α (λ n : ℕ, (f ^ n) v)
-    ↔ ∀ (p : polynomial α), polynomial.eval₂ (algebra_map _ _) f p v = 0 → p = 0 :=
-begin
-  rw linear_independent_iff,
-  simp only [finsupp.total_apply],
-  simp only [finsupp_sum_eq_eval₂], 
-  refl
-end
-
-open polynomial
-open finite_dimensional
-
-section
 
 /-- Every linear operator on a vector space over an algebraically closed field has
     an eigenvalue. (Axler's Theorem 2.1.) -/
@@ -133,12 +116,9 @@ begin
     simpa [smul_smul, inv_mul_cancel (λ h, h_q_ne_0 (leading_coeff_eq_zero.1 h)), 
       mul_comm _ (coeff q 0), div_eq_mul_inv.symm] }
 end
-end
-
-section
 
 /-- Eigenvectors corresponding to distinct eigenvalues of a linear operator are
-linearly independent (Axler's Proposition 2.2) -/
+    linearly independent (Axler's Proposition 2.2) -/
 lemma eigenvectors_linear_independent [field α] [decidable_eq α] [vector_space α β] 
   (f : β →ₗ[α] β) (μs : set α) (xs : μs → β) (h_eigenvec : ∀ μ : μs, eigenvector f μ (xs μ)): 
   linear_independent α xs := 
@@ -230,20 +210,16 @@ begin
       exact h_lμ_eq_0 μ h_cases } }
 end
 
+/-- A generalized eigenvector (also called eventual eigenvector) of a linear map
+    $f$ is a nonzero vector $x$ such that $(f - \mu I) ^ k) x = 0$ for some
+    scalar $\mu$ and some natural number $k$ (where $I$ is the identity map). 
+
+    We deviate from Axler's definition by requiring that $x$ is nonzero, which
+    implies that $k$ is nonzero, too. -/
 def generalized_eigenvector [field α] [vector_space α β] 
   (f : β →ₗ[α] β) (k : ℕ) (μ : α) (x : β) : Prop := x ≠ 0 ∧ ((f - am μ) ^ k) x = 0
 
-lemma generalized_eigenvector_zero_beyond [field α] [vector_space α β] 
-  {f : β →ₗ[α] β} {k : ℕ} {μ : α} {x : β} (h : generalized_eigenvector f k μ x) :
-  ∀ m : ℕ, k ≤ m → ((f - am μ) ^ m) x = 0 :=
-begin
-  intros m hm,
-  rw ←pow_eq_pow_sub_mul _ hm,
-  change ((f - am μ) ^ (m - k)) (((f - am μ) ^ k) x) = 0,
-  unfold generalized_eigenvector at h,
-  rw [h.2, linear_map.map_zero]
-end
-
+/-- The natural number of a generalized eigenvector is never 0. -/
 lemma exp_ne_zero_of_generalized_eigenvector_ne_zero [field α] [vector_space α β] 
   {f : β →ₗ[α] β} {k : ℕ} {μ : α} {x : β} (h : generalized_eigenvector f k μ x) : 
   k ≠ 0 :=
@@ -254,6 +230,21 @@ begin
   rwa [h_nz, pow_zero] at h
 end
 
+/-- A generalized eigenvector for some number `k` is also a generalized
+    eigenvector for number larger than `k`. -/
+lemma generalized_eigenvector_zero_beyond [field α] [vector_space α β] 
+  {f : β →ₗ[α] β} {k : ℕ} {μ : α} {x : β} (h : generalized_eigenvector f k μ x) :
+  ∀ m : ℕ, k ≤ m → generalized_eigenvector f m μ x :=
+begin
+  intros m hm,
+  refine ⟨h.1, _⟩,
+  rw ←pow_eq_pow_sub_mul _ hm,
+  change ((f - am μ) ^ (m - k)) (((f - am μ) ^ k) x) = 0,
+  unfold generalized_eigenvector at h,
+  rw [h.2, linear_map.map_zero]
+end
+
+/-- All eigenvectors are generalized eigenvectors. -/
 lemma generalized_eigenvector_of_eigenvector [field α] [vector_space α β] 
   {f : β →ₗ[α] β} {k : ℕ} {μ : α} {x : β} (hx : eigenvector f μ x) (hk : k > 0) :
   generalized_eigenvector f k μ x :=
@@ -296,8 +287,9 @@ begin
         simp [ih j hj j rfl] }, 
 
       have h_zero_beyond_k : ∀ m, k ≤ m → ((f - am μ) ^ m) x = 0,
-      { apply generalized_eigenvector_zero_beyond,
-        apply (@nat.find_spec (λ k : ℕ, generalized_eigenvector f k μ x) (classical.dec_pred _) h_exists_eigenvec) },
+      { intros m hm,
+        apply (generalized_eigenvector_zero_beyond 
+            (@nat.find_spec (λ k : ℕ, generalized_eigenvector f k μ x) (classical.dec_pred _) h_exists_eigenvec) _ hm).2 },
 
       have h_zero_of_gt : ∀ j, j > i → ((f - am μ) ^ (k - i.val - 1)) (l j • z j) = 0,
       { intros j hj,
@@ -354,8 +346,8 @@ begin
     show x ≠ 0 ∧ ((f - am μ) ^ findim α β) x = 0,
     { split,
       { exact h_x_nz },
-      apply generalized_eigenvector_zero_beyond 
-        (@nat.find_spec (λ k : ℕ, generalized_eigenvector f k μ x) (classical.dec_pred _) h_exists_eigenvec),
+      apply (generalized_eigenvector_zero_beyond 
+        (@nat.find_spec (λ k : ℕ, generalized_eigenvector f k μ x) (classical.dec_pred _) h_exists_eigenvec) _ _).2,
       rw [←cardinal.nat_cast_le, ←cardinal.lift_mk_fin _, ←cardinal.lift_le, cardinal.lift_lift],
       rw findim_eq_dim,
       apply h_lin_indep.le_lift_dim} },
@@ -363,10 +355,6 @@ begin
   { show generalized_eigenvector f (findim α β) μ x → (∃ (k : ℕ), generalized_eigenvector f k μ x),
     exact λh, ⟨_, h⟩, }
 end
-
-section
-
-section
 
 lemma generalized_eigenvector_restrict_aux [field α] [vector_space α β] 
   (f : β →ₗ[α] β) (p : submodule α β) (k : ℕ) (μ : α) (x : p) 
@@ -382,8 +370,11 @@ begin
     rw [linear_map.sub_apply, linear_map.sub_apply, linear_map.restrict_apply, ←ih], 
     refl }
 end
-end
 
+/-- If `f` maps a subspace `p` into itself, then the generalized eigenvectors of
+    `f` restricted to `p` are the generalized eigenvectors of `f` that lie in
+    `p`.
+-/
 lemma generalized_eigenvector_restrict [field α] [vector_space α β] 
   (f : β →ₗ[α] β) (p : submodule α β) (k : ℕ) (μ : α) (x : p) (hfp : ∀ (x : β), x ∈ p → f x ∈ p) : 
   generalized_eigenvector (linear_map.restrict f p p hfp) k μ x 
@@ -393,16 +384,21 @@ begin
   simp [generalized_eigenvector]
 end
 
+/-- If a vector is a generalized eigenvector for some number `k`, then it is
+    also a generalized eigenvector for the dimension of the vector space. -/
 lemma generalized_eigenvector_dim_of_any
   [field α] [decidable_eq α] [vector_space α β] [finite_dimensional α β]
   {f : β →ₗ[α] β} {μ : α}
-  {m : ℕ} {x : β} (h : generalized_eigenvector f m μ x) :
+  {k : ℕ} {x : β} (h : generalized_eigenvector f k μ x) :
   generalized_eigenvector f (findim α β) μ x :=
 begin
   rw ←generalized_eigenvector_dim,
-  { exact ⟨m, h⟩ }
+  { exact ⟨k, h⟩ }
 end
 
+/-- Kernel and range of $(f - \mu I) ^ n$ are disjoint, where $f$ is a linear
+    map, $\mu$ is a scalar, $I$ is the identity matrix, and $n$ is the dimension of
+    the vector space. -/
 lemma generalized_eigenvec_disjoint_range_ker
   [field α] [decidable_eq α] [vector_space α β] [finite_dimensional α β]
   (f : β →ₗ[α] β) (μ : α) : 
@@ -419,6 +415,8 @@ begin
   show v ∈ ↑⊥, by simp [hv0]
 end
 
+/-- The kernel of $(f - \mu I) ^ k$ for $k > 0$ has positive dimension if $\mu$
+    is an eigenvalue. -/
 lemma pos_dim_eigenker_of_eigenvec [field α] [is_alg_closed α] [vector_space α β] 
   {f : β →ₗ[α] β} {n : ℕ} {μ : α} {x : β} (hx : eigenvector f μ x) : 
   0 < dim α ((f - am μ) ^ n.succ).ker :=
@@ -431,6 +429,7 @@ begin
   exact congr_arg subtype.val h,
 end
 
+/-- Variant of `pos_dim_eigenker_of_eigenvec` for finite dimensional vector spaces. -/
 lemma pos_findim_eigenker_of_eigenvec 
   [field α] [is_alg_closed α] [vector_space α β] [finite_dimensional α β]
   {f : β →ₗ[α] β} {n : ℕ} {μ : α} {x : β} (hx : eigenvector f μ x) : 
@@ -441,6 +440,7 @@ begin
   apply pos_dim_eigenker_of_eigenvec hx,
 end
 
+/-- The kernel of $(f - \mu I) ^ k$ is contained in the span of all generalized eigenvectors. -/
 lemma eigenker_le_span_gen_eigenvec [field α] [vector_space α β] 
   (f : β →ₗ[α] β) (μ₀ : α) (n : ℕ) :
 ((f - am μ₀) ^ n).ker 
@@ -453,6 +453,7 @@ begin
     exact ⟨n, μ₀, h_cases, linear_map.mem_ker.1 hx⟩ }
 end
 
+/-- If $x$ is in the range of $(f - \mu I) ^ k$, then so is $f(x)$. -/
 lemma image_mem_eigenrange_of_mem_eigenrange [field α] [vector_space α β] 
   {f : β →ₗ[α] β} {μ : α} {x : β} {n : ℕ}
   (hx : x ∈ ((f - am μ) ^ n).range) : 
@@ -526,8 +527,3 @@ begin
       apply sup_le hV₂ hV₁ } }
 end
 
-end
-
-end
-
-end eigenvector
