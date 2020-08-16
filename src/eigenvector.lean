@@ -1,9 +1,7 @@
 /-
-
-Algebraically closed fields.
-
-We follow Axler's paper "Down with determinants!"
-(https://www.maa.org/sites/default/files/pdf/awards/Axler-Ford-1996.pdf).
+Copyright (c) 2020 Alexander Bentkamp. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Author: Alexander Bentkamp.
 -/
 
 import ring_theory.principal_ideal_domain
@@ -32,6 +30,9 @@ section eigenvector
 
 variables {α : Type v} {β : Type w} [decidable_eq β] [add_comm_group β]
 
+def eigenvector [field α] [vector_space α β] 
+  (f : β →ₗ[α] β) (μ : α) (x : β) : Prop := x ≠ 0 ∧ f x = μ • x
+
 local notation `am` := algebra_map α (β →ₗ[α] β)
 
 lemma linear_independent_iff_eval₂ {α : Type v} {β : Type w}
@@ -56,7 +57,7 @@ section
 lemma exists_eigenvector 
   [field α] [is_alg_closed α] [decidable_eq α] [vector_space α β] [finite_dimensional α β]
   (f : β →ₗ[α] β) (hex : ∃ v : β, v ≠ 0) : 
-  ∃ (x : β) (c : α), x ≠ 0 ∧ f x = c • x :=
+  ∃ (x : β) (c : α), eigenvector f c x :=
 begin
   obtain ⟨v, hv⟩ : ∃ v : β, v ≠ 0 := hex,
   have h_lin_dep : ¬ linear_independent α (λ n : ℕ, (f ^ n) v),
@@ -100,11 +101,10 @@ end
 
 section
 
-/-- Non-zero eigenvectors corresponding to distinct eigenvalues of a linear operator are
+/-- Eigenvectors corresponding to distinct eigenvalues of a linear operator are
 linearly independent (Axler's Proposition 2.2) -/
 lemma eigenvectors_linear_independent [field α] [decidable_eq α] [vector_space α β] 
-  (f : β →ₗ[α] β) (μs : set α) (xs : μs → β) 
-  (h_xs_nonzero : ∀ a, xs a ≠ 0) (h_eigenvec : ∀ μ : μs, f (xs μ) = (μ : α) • xs μ): 
+  (f : β →ₗ[α] β) (μs : set α) (xs : μs → β) (h_eigenvec : ∀ μ : μs, eigenvector f μ (xs μ)): 
   linear_independent α xs := 
 begin
   rw linear_independent_iff,
@@ -134,7 +134,7 @@ begin
     have total_l' : (@linear_map.to_fun α (finsupp μs α) β _ _ _ _ _ (finsupp.total μs β α xs)) l' = 0,
     { let g := f - am μ₀, 
       have h_gμ₀: g (l μ₀ • xs μ₀) = 0, 
-        by rw [linear_map.map_smul, linear_map.sub_apply, h_eigenvec, module.endomorphism_algebra_map_apply2, sub_self, smul_zero],
+        by rw [linear_map.map_smul, linear_map.sub_apply, (h_eigenvec _).2, module.endomorphism_algebra_map_apply2, sub_self, smul_zero],
       have h_useless_filter : finset.filter (λ (a : μs), l'_f a ≠ 0) l_support' = l_support',
       { convert @finset.filter_congr _ _ _ (classical.dec_pred _) (classical.dec_pred _) _ _,
         { apply finset.filter_true.symm },
@@ -142,7 +142,7 @@ begin
       have bodies_eq : ∀ (μ : μs), l'_f μ • xs μ = g (l μ • xs μ), 
       { intro μ,
         dsimp only [g, l'_f],
-        rw [linear_map.map_smul, linear_map.sub_apply, h_eigenvec, module.endomorphism_algebra_map_apply2, ←sub_smul, smul_smul, mul_comm] },
+        rw [linear_map.map_smul, linear_map.sub_apply, (h_eigenvec _).2, module.endomorphism_algebra_map_apply2, ←sub_smul, smul_smul, mul_comm] },
       have := finsupp.total_on_finset l_support' l'_f xs _,
       unfold_coes at this,
       rw [this, ←linear_map.map_zero g,
@@ -184,7 +184,7 @@ begin
     { rw [finsupp.total_apply, finsupp.sum, h_l_support, 
           finset.sum_insert hμ₀, h_sum_l_support'_eq_0, add_zero] at hl,
       by_contra h,
-      exact h_xs_nonzero μ₀ ((vector_space.smul_neq_zero (xs μ₀) h).1 hl) },
+      exact (h_eigenvec μ₀).1 ((vector_space.smul_neq_zero (xs μ₀) h).1 hl) },
 
     show l = 0,
     { ext μ,
@@ -195,7 +195,7 @@ begin
 end
 
 def generalized_eigenvector [field α] [vector_space α β] 
-  (f : β →ₗ[α] β) (k : ℕ) (μ : α) (x : β) : Prop := ((f - am μ) ^ k) x = 0
+  (f : β →ₗ[α] β) (k : ℕ) (μ : α) (x : β) : Prop := x ≠ 0 ∧ ((f - am μ) ^ k) x = 0
 
 lemma generalized_eigenvector_zero_beyond [field α] [vector_space α β] 
   {f : β →ₗ[α] β} {k : ℕ} {μ : α} {x : β} (h : generalized_eigenvector f k μ x) :
@@ -205,26 +205,27 @@ begin
   rw ←pow_eq_pow_sub_mul _ hm,
   change ((f - am μ) ^ (m - k)) (((f - am μ) ^ k) x) = 0,
   unfold generalized_eigenvector at h,
-  rw [h, linear_map.map_zero]
+  rw [h.2, linear_map.map_zero]
 end
 
 lemma exp_ne_zero_of_generalized_eigenvector_ne_zero [field α] [vector_space α β] 
-  {f : β →ₗ[α] β} {k : ℕ} {μ : α} {x : β} (h : generalized_eigenvector f k μ x) 
-  (hx : x ≠ 0) : k ≠ 0 :=
+  {f : β →ₗ[α] β} {k : ℕ} {μ : α} {x : β} (h : generalized_eigenvector f k μ x) : 
+  k ≠ 0 :=
 begin
-  contrapose hx,
-  rw not_not at hx ⊢,
-  rwa [hx, generalized_eigenvector, pow_zero] at h,
+  rcases h with ⟨h_nz, h⟩,
+  contrapose h_nz,
+  rw not_not at h_nz ⊢,
+  rwa [h_nz, pow_zero] at h
 end
 
 lemma generalized_eigenvector_of_eigenvector [field α] [vector_space α β] 
-  {f : β →ₗ[α] β} {k : ℕ} {μ : α} {x : β} (hx : f x = μ • x) (hk : k > 0) :
+  {f : β →ₗ[α] β} {k : ℕ} {μ : α} {x : β} (hx : eigenvector f μ x) (hk : k > 0) :
   generalized_eigenvector f k μ x :=
 begin
   rw [generalized_eigenvector, ←nat.succ_pred_eq_of_pos hk, pow_succ'],
-  change ((f - am μ) ^ nat.pred k) ((f - am μ) x) = 0,
-  have : (f - am μ) x = 0 := by simp [hx, module.endomorphism_algebra_map_apply2],
-  simp [this]
+  change x ≠ 0 ∧ ((f - am μ) ^ nat.pred k) ((f - am μ) x) = 0,
+  have : (f - am μ) x = 0 := by simp [hx.2, module.endomorphism_algebra_map_apply2],
+  simp [this, hx.1]
 end
 
 /-- The set of generalized eigenvectors of f corresponding to an eigenvalue μ
@@ -237,10 +238,14 @@ lemma generalized_eigenvector_dim
     ↔ generalized_eigenvector f (findim α β) μ x :=
 begin
   split,
-  { show (∃ (k : ℕ), generalized_eigenvector f k μ x) → ((f - am μ) ^ findim α β) x = 0,
+  { show (∃ (k : ℕ), generalized_eigenvector f k μ x) → x ≠ 0 ∧ ((f - am μ) ^ findim α β) x = 0,
     intro h_exists_eigenvec,
     let k := @nat.find (λ k : ℕ, generalized_eigenvector f k μ x) (classical.dec_pred _) h_exists_eigenvec,
     let z := (λ i : fin k, ((f - am μ) ^ (i : ℕ)) x),
+
+    have h_x_nz : x ≠ 0, 
+    { rcases h_exists_eigenvec with ⟨k, h⟩,
+      exact h.1 },
 
     have h_lin_indep : linear_independent α z,
     { rw linear_independent_iff,
@@ -300,24 +305,26 @@ begin
         simp only [linear_map.map_smul, z] at this,
         apply this },
 
-      have h_pow_k_sub_1 : ((f - am μ) ^ (k - 1)) x ≠ 0 := 
-        @nat.find_min (λ k : ℕ, generalized_eigenvector f k μ x) (classical.dec_pred _) h_exists_eigenvec _
-            (nat.sub_lt (nat.lt_of_le_of_lt (nat.zero_le _) i.2) nat.zero_lt_one),
-      
+      have h_pow_k_sub_1 : ((f - am μ) ^ (k - 1)) x ≠ 0 :=
+        not_and.1 (@nat.find_min (λ k : ℕ, generalized_eigenvector f k μ x) (classical.dec_pred _) h_exists_eigenvec _
+            (nat.sub_lt (nat.lt_of_le_of_lt (nat.zero_le _) i.2) nat.zero_lt_one)) h_x_nz,
+
       show l i = 0,
       { contrapose h_pow_k_sub_1 with h_li_ne_0,
         rw not_not,
         apply (vector_space.smul_neq_zero _ h_li_ne_0).1, 
         apply h_l_smul_pow_k_sub_1 } },
 
-    show ((f - am μ) ^ findim α β) x = 0,
-    { apply generalized_eigenvector_zero_beyond 
+    show x ≠ 0 ∧ ((f - am μ) ^ findim α β) x = 0,
+    { split,
+      { exact h_x_nz },
+      apply generalized_eigenvector_zero_beyond 
         (@nat.find_spec (λ k : ℕ, generalized_eigenvector f k μ x) (classical.dec_pred _) h_exists_eigenvec),
       rw [←cardinal.nat_cast_le, ←cardinal.lift_mk_fin _, ←cardinal.lift_le, cardinal.lift_lift],
       rw findim_eq_dim,
       apply h_lin_indep.le_lift_dim} },
 
-  { show ((f - am μ) ^ findim α β) x = 0 → (∃ (k : ℕ), generalized_eigenvector f k μ x),
+  { show generalized_eigenvector f (findim α β) μ x → (∃ (k : ℕ), generalized_eigenvector f k μ x),
     exact λh, ⟨_, h⟩, }
 end
 
@@ -345,7 +352,10 @@ lemma generalized_eigenvector_restrict [field α] [vector_space α β]
   (f : β →ₗ[α] β) (p : submodule α β) (k : ℕ) (μ : α) (x : p) (hfp : ∀ (x : β), x ∈ p → f x ∈ p) : 
   generalized_eigenvector (linear_map.restrict f p p hfp) k μ x 
     ↔ generalized_eigenvector f k μ x :=
-by { rw [generalized_eigenvector, subtype.ext_iff, generalized_eigenvector_restrict_aux], refl }
+begin 
+  rw [generalized_eigenvector, subtype.ext_iff,  generalized_eigenvector_restrict_aux], 
+  simp [generalized_eigenvector]
+end
 
 lemma generalized_eigenvector_dim_of_any
   [field α] [decidable_eq α] [vector_space α β] [finite_dimensional α β]
@@ -366,31 +376,33 @@ begin
   have h2n : ((f - am μ) ^ (findim α β + findim α β)) u = 0,
   { rw [pow_add, ←linear_map.mem_ker.1 hv, ←hu], refl },
   have hn : ((f - am μ) ^ findim α β) u = 0, 
-  { apply generalized_eigenvector_dim_of_any h2n },
+  { by_cases h_cases: u = 0, 
+    { simp [h_cases] },
+    { apply (generalized_eigenvector_dim_of_any ⟨h_cases, h2n⟩).2 } },
   have hv0 : v = 0, by rw [←hn, hu],
   show v ∈ ↑⊥, by simp [hv0]
 end
 
-lemma pos_dim_eigenker_of_nonzero_eigenvec [field α] [is_alg_closed α] [vector_space α β] 
-  {f : β →ₗ[α] β} {n : ℕ} {μ : α} {x : β} (hx : x ≠ 0) (hfx : f x = μ • x) : 
+lemma pos_dim_eigenker_of_eigenvec [field α] [is_alg_closed α] [vector_space α β] 
+  {f : β →ₗ[α] β} {n : ℕ} {μ : α} {x : β} (hx : eigenvector f μ x) : 
   0 < dim α ((f - am μ) ^ n.succ).ker :=
 begin
   have x_mem : x ∈ ((f - am μ) ^ n.succ).ker,
-  { simp [pow_succ', hfx, module.endomorphism_algebra_map_apply2] },
+  { simp [pow_succ', hx.2, module.endomorphism_algebra_map_apply2] },
   apply dim_pos_of_mem_ne_zero (⟨x, x_mem⟩ : ((f - am μ) ^ n.succ).ker),
   intros h,
-  apply hx,
+  apply hx.1,
   exact congr_arg subtype.val h,
 end
 
-lemma pos_findim_eigenker_of_nonzero_eigenvec 
+lemma pos_findim_eigenker_of_eigenvec 
   [field α] [is_alg_closed α] [vector_space α β] [finite_dimensional α β]
-  {f : β →ₗ[α] β} {n : ℕ} {μ : α} {x : β} (hx : x ≠ 0) (hfx : f x = μ • x) : 
+  {f : β →ₗ[α] β} {n : ℕ} {μ : α} {x : β} (hx : eigenvector f μ x) : 
   0 < findim α ((f - am μ) ^ n.succ).ker :=
 begin
   apply cardinal.nat_cast_lt.1,
   rw findim_eq_dim,
-  apply pos_dim_eigenker_of_nonzero_eigenvec hx hfx,
+  apply pos_dim_eigenker_of_eigenvec hx,
 end
 
 lemma eigenker_le_span_gen_eigenvec [field α] [vector_space α β] 
@@ -399,8 +411,10 @@ lemma eigenker_le_span_gen_eigenvec [field α] [vector_space α β]
   ≤ submodule.span α ({x : β | ∃ (k : ℕ) (μ : α), generalized_eigenvector f k μ x}) :=
 begin
   intros x hx,
-  apply submodule.subset_span,
-  exact ⟨n, μ₀, linear_map.mem_ker.1 hx⟩
+  by_cases h_cases: x = 0,
+  { simp [h_cases] },
+  { apply submodule.subset_span,
+    exact ⟨n, μ₀, h_cases, linear_map.mem_ker.1 hx⟩ }
 end
 
 lemma image_mem_eigenrange_of_mem_eigenrange [field α] [vector_space α β] 
@@ -443,7 +457,7 @@ begin
     have h_dim_add : findim α V₂ + findim α V₁ = findim α β,
     { apply linear_map.findim_range_add_findim_ker },
     have h_dim_V₁_pos : 0 < findim α V₁,
-    { apply pos_findim_eigenker_of_nonzero_eigenvec hx_ne_0 hμ₀ },
+    { apply pos_findim_eigenker_of_eigenvec ⟨hx_ne_0, hμ₀⟩ },
     have h_findim_V₂ : findim α V₂ < n.succ := by linarith,
     have h_f_V₂ : ∀ (x : β), x ∈ V₂ → f x ∈ V₂, 
     { intros x hx, 
